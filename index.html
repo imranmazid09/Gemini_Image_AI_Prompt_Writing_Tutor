@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt Writing Tutor for Image Generation</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Custom Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide-react@0.292.0/dist/umd/lucide.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+        /* Style for the collapsible details summary */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        /* Custom styles for loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Styling for generated prompt examples */
+        .prompt-example-card {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            height: 100%;
+        }
+        .dark .prompt-example-card {
+            background-color: #1f2937;
+            border-color: #374151;
+        }
+        /* Style for locked button */
+        #generate-btn.locked {
+            background-color: #6b7280;
+            cursor: not-allowed;
+            position: relative;
+        }
+        #generate-btn.locked:hover {
+            background-color: #4b5563;
+        }
+        #generate-btn.locked .lock-icon {
+            display: inline-block;
+        }
+        .lock-icon {
+            display: none;
+            margin-right: 0.5rem;
+        }
+        .prompt-element-item {
+             background-color: #f9fafb;
+             border: 1px solid #e5e7eb;
+             border-radius: 0.5rem;
+             padding: 0.75rem;
+             margin-bottom: 0.5rem;
+        }
+        .dark .prompt-element-item {
+             background-color: #1f2937;
+             border-color: #4b5563;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <div class="container mx-auto max-w-5xl p-4 md:p-8">
+
+        <!-- Header & Instructions -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white mb-3">AI Prompt Writing Tutor</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400">Craft powerful prompts for image generation using the 6-element framework.</p>
+        </header>
+
+        <div class="space-y-4 mb-8">
+            <!-- Collapsible Guidance Panels -->
+            <details class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+                <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                    How to Use This AI Tutor
+                    <i data-lucide="chevron-down" class="transition-transform transform"></i>
+                </summary>
+                <div class="mt-4 text-gray-700 dark:text-gray-300 space-y-2">
+                    <p>1. <strong>Fill the Fields:</strong> Add your ideas into the six text boxes below. </p>
+                    <p>2. <strong>Evaluate:</strong> Click "Evaluate My Prompt" to get a rigorous evaluation from the AI professor.</p>
+                    <p>3. <strong>Achieve Excellence:</strong> You must score 8/10 or higher to unlock the "Generate Image Preview" button.</p>
+                    <p>4. <strong>Get Inspired:</strong> Click “Show A Strong Prompt Example” to see how the AI would generate an effective prompt based on your subject.</p>
+                </div>
+            </details>
+            <details class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+                <summary class="font-semibold text-lg cursor-pointer flex justify-between items-center">
+                    Gold-Standard Prompt Example (The Contemplative Cat)
+                    <i data-lucide="chevron-down" class="transition-transform transform"></i>
+                </summary>
+                <div class="mt-4 text-gray-700 dark:text-gray-300 space-y-3">
+                    <p><strong>Subject:</strong> An elderly Siamese cat with a contemplative, weary expression, perched on a rain-drenched windowsill, gazing at a distant neon-lit cityscape.</p>
+                    <p><strong>Artistic Style:</strong> Impressionist watercolor with visible, flowing brushstrokes that evoke the texture of rain and soft fur.</p>
+                    <p><strong>Details:</strong> Mood: Lonely yet serene. Textures: Fluffy, slightly matted fur, soft raindrops streaking the glass. Action: Ears slightly tilted forward.</p>
+                    <p><strong>Composition:</strong> Close-up from slightly above eye level. Cat on the left third of the frame. Blurred bokeh background.</p>
+                    <p><strong>Lighting:</strong> Cool, diffused blue-gray streetlight glow from outside, with a warm amber indoor light casting soft highlights on the cat’s face.</p>
+                    <p><strong>Color:</strong> Dominant palette of moody blues and grays, with accents of warm amber and pops of neon pink and cyan in raindrop reflections.</p>
+                </div>
+            </details>
+        </div>
+
+        <!-- Prompt Input Section -->
+        <div id="prompt-form" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Textarea fields are now hardcoded in HTML for reliability -->
+            <div>
+                <label for="subject" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">1. Subject</label>
+                <textarea id="subject" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="The primary focus of the image. e.g., 'A stoic astronaut on Mars'"></textarea>
+            </div>
+            <div>
+                <label for="style" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">2. Artistic Style</label>
+                <textarea id="style" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="The visual aesthetic. e.g., 'Hyperrealistic digital painting'"></textarea>
+            </div>
+            <div>
+                <label for="details" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">3. Details</label>
+                <textarea id="details" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Context, mood, actions, textures. e.g., 'Wearing a dusty, worn suit'"></textarea>
+            </div>
+            <div>
+                <label for="composition" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">4. Composition</label>
+                <textarea id="composition" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Camera angles, framing. e.g., 'Low-angle shot, looking up'"></textarea>
+            </div>
+            <div>
+                <label for="lighting" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">5. Lighting</label>
+                <textarea id="lighting" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="The nature and quality of light. e.g., 'Dramatic cinematic lighting'"></textarea>
+            </div>
+            <div>
+                <label for="color" class="block text-sm font-bold text-gray-900 dark:text-white mb-2">6. Color</label>
+                <textarea id="color" rows="3" class="w-full p-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500" placeholder="Dominant hues or color palette. e.g., 'A palette of deep reds and oranges'"></textarea>
+            </div>
+        </div>
+
+        <!-- Action Center -->
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg flex flex-wrap gap-4 items-center justify-center sticky top-2 z-10 mb-8">
+            <button id="evaluate-btn" class="flex-grow md:flex-grow-0 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed">Evaluate My Prompt</button>
+            <button id="examples-btn" class="flex-grow md:flex-grow-0 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed">Show A Strong Prompt Example</button>
+            <button id="generate-btn" class="flex-grow md:flex-grow-0 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all locked">
+                 <span class="lock-icon"><i data-lucide="lock"></i></span>Generate Image Preview
+            </button>
+            <button id="reset-btn" class="flex-grow md:flex-grow-0 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-all">Start New Prompt</button>
+        </div>
+
+        <!-- Dynamic Output Areas -->
+        <div id="output-container" class="space-y-8">
+            <!-- Feedback & Scoring Area -->
+            <div id="feedback-output" class="min-h-[5rem] p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden"></div>
+            
+            <!-- Examples Area -->
+            <div id="examples-output" class="min-h-[5rem] p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden"></div>
+
+            <!-- Image Preview Area -->
+            <div id="image-output" class="min-h-[5rem] p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hidden">
+                 <h2 class="text-2xl font-bold mb-4 text-center">Image Preview</h2>
+                 <div id="image-placeholder" class="w-full max-w-lg mx-auto aspect-square bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <p class="text-gray-500">Achieve a score of 8/10 or higher to unlock this feature.</p>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- CONFIG & CONSTANTS ---
+        const PROMPT_IDS = ['subject', 'style', 'details', 'composition', 'lighting', 'color'];
+        
+        // --- UTILITY & HELPER FUNCTIONS ---
+        const createLoader = (text = 'Thinking...') => `
+            <div class="flex flex-col items-center justify-center space-y-3">
+                <div class="loader"></div>
+                <p class="text-lg font-medium text-gray-600 dark:text-gray-400">${text}</p>
+            </div>
+        `;
+        
+        const getCombinedPrompt = (returnArray = false) => {
+            const parts = PROMPT_IDS.map(id => {
+                const element = document.getElementById(id);
+                return { id: id, value: element ? element.value.trim() : "" };
+            });
+            return returnArray ? parts : parts.map(p => p.value).filter(Boolean).join('. ');
+        };
+        
+        const isAnyFieldFilled = () => {
+            return PROMPT_IDS.some(id => document.getElementById(id).value.trim() !== '');
+        };
+        
+        const updateButtonStates = () => {
+            const filled = isAnyFieldFilled();
+            const evaluateBtn = document.getElementById('evaluate-btn');
+            const examplesBtn = document.getElementById('examples-btn');
+            if (evaluateBtn) evaluateBtn.disabled = !filled;
+            if (examplesBtn) examplesBtn.disabled = !filled;
+        };
+
+        const toggleButtonLoading = (button, isLoading) => {
+            if (!button) return;
+            if (button.id === 'generate-btn' && button.classList.contains('locked') && !isLoading) {
+                 button.classList.remove('opacity-75', 'cursor-wait');
+                 return;
+            }
+            button.disabled = isLoading;
+            button.classList.toggle('opacity-75', isLoading);
+            button.classList.toggle('cursor-wait', isLoading);
+        };
+        
+        /**
+         * Extracts a JSON object from a string that might contain other text, like markdown.
+         * @param {string} str The string to parse.
+         * @returns {object|null} The parsed JSON object or null if not found.
+         */
+        function extractJsonFromString(str) {
+            if (!str || typeof str !== 'string') {
+                return null;
+            }
+            const match = str.match(/\{[\s\S]*\}/);
+            if (match) {
+                try {
+                    return JSON.parse(match[0]);
+                } catch (e) {
+                    console.error("Failed to parse extracted JSON:", e, "Raw text was:", str);
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        // --- CORE LOGIC & API CALLS ---
+        const handleEvaluate = async () => {
+            const userPromptParts = getCombinedPrompt(true);
+            const filledPartsCount = userPromptParts.filter(p => p.value).length;
+            if (filledPartsCount === 0) return;
+            
+            const evaluateBtn = document.getElementById('evaluate-btn');
+            const feedbackOutput = document.getElementById('feedback-output');
+            
+            toggleButtonLoading(evaluateBtn, true);
+            feedbackOutput.innerHTML = createLoader('The Gemini AI is evaluating your submission...');
+            feedbackOutput.classList.remove('hidden');
+            window.scrollTo({ top: feedbackOutput.offsetTop - 100, behavior: 'smooth' });
+
+            const structuredPromptInput = userPromptParts.map(p => `[${p.id}]: ${p.value || '(empty)'}`).join('\n');
+
+            const metaPrompt = `Act as an exceptionally strict, rigorous university professor.
+            
+            **Primary Directive:** You will evaluate a student's prompt which is provided as six distinct fields. Your primary task is to grade **each field in complete isolation**. You are forbidden from analyzing the text in one field and applying that analysis to another.
+
+            **Student's Submission (separated by field):**
+            ${structuredPromptInput}
+
+            **Mandatory Grading Rules:**
+            1.  **Isolate Each Field:** Evaluate \`[subject]\` based ONLY on the text next to \`[subject]\`. Evaluate \`[style]\` based ONLY on the text next to \`[style]\`, and so on for all six fields.
+            2.  **Score Empty Fields as Zero:** If a field is explicitly marked as \`(empty)\`, its score MUST be 0. The feedback must state that its omission is a critical failure. There are no exceptions.
+            3.  **Grade Filled Fields Harshly:** If a field has text, grade it from 0-5. A simple phrase is not enough for a high score. It requires descriptive detail *within that specific field*.
+            4.  **Calculate Overall Score:** The overall score is an average of the six individual element scores, scaled to 10 and rounded to one decimal place. However, if four or more fields are empty, the overall score MUST be overridden to \`1\`.
+            5.  **Overall Feedback:** The overall feedback must reflect the grading. If the score is low due to omissions, the feedback must state that directly.
+
+            **Output Format:**
+            Respond with a single, valid JSON object. Add no text or markdown outside this object.`;
+            
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: metaPrompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
+            try {
+                // All API calls now go through our Netlify function.
+                const response = await fetch('/.netlify/functions/api', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        endpoint: 'generateContent', // Specify the Gemini endpoint
+                        payload: payload
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`The server returned an unreadable error: ${response.status} ${response.statusText}`);
+                    }
+                    throw new Error(errorData.error?.message || 'An unknown API error occurred.');
+                }
+
+                const result = await response.json();
+                
+                if (result.promptFeedback && result.promptFeedback.blockReason) {
+                    throw new Error(`Your prompt was blocked for safety reasons: <strong>${result.promptFeedback.blockReason}</strong>. Please revise your prompt.`);
+                }
+                
+                const candidate = result.candidates && result.candidates[0];
+                if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+                     throw new Error("The AI did not return a valid response structure. This can happen with very short prompts or due to a safety filter. Please try a more descriptive prompt.");
+                }
+                
+                const rawText = candidate.content.parts[0].text;
+                if (!rawText || rawText.trim() === '') {
+                    throw new Error("The AI returned an empty response. Please try rephrasing your prompt or adding more detail.");
+                }
+
+                let data = extractJsonFromString(rawText);
+
+                if (!data) {
+                    console.error("Could not extract valid JSON from response:", rawText);
+                    throw new Error("The AI returned a response in an unexpected format. Please try again.");
+                }
+
+                if (typeof data.overallScore !== 'number' || typeof data.overallFeedback !== 'string' || !Array.isArray(data.elementFeedback)) {
+                    console.error("Invalid data structure from AI:", data);
+                    throw new Error("The AI's response was missing required fields. Please try rephrasing your prompt.");
+                }
+                
+                if (filledPartsCount <= 2) {
+                    data.overallScore = 1;
+                }
+                    
+                renderEvaluation(data);
+                const generateBtn = document.getElementById('generate-btn');
+                if (data.overallScore >= 8) {
+                    generateBtn.disabled = false;
+                    generateBtn.classList.remove('locked', 'bg-gray-500');
+                    generateBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    generateBtn.querySelector('.lock-icon').innerHTML = `<i data-lucide="unlock"></i>`;
+                } else {
+                    generateBtn.disabled = true;
+                    generateBtn.classList.add('locked');
+                    generateBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    generateBtn.querySelector('.lock-icon').innerHTML = `<i data-lucide="lock"></i>`;
+                }
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+
+
+            } catch (error) {
+                console.error("Evaluation Error:", error);
+                feedbackOutput.innerHTML = `<p class="text-red-500 text-center p-4">${error.message}</p>`;
+            } finally {
+                toggleButtonLoading(evaluateBtn, false);
+            }
+        };
+
+        const handleShowExamples = async () => {
+            const userPromptParts = getCombinedPrompt(true);
+            const userPrompt = userPromptParts.map(p=>p.value).filter(Boolean).join('. ');
+            if (!userPrompt) return;
+
+            const examplesBtn = document.getElementById('examples-btn');
+            const examplesOutput = document.getElementById('examples-output');
+            
+            toggleButtonLoading(examplesBtn, true);
+            examplesOutput.innerHTML = createLoader('The Gemini AI is preparing examples...');
+            examplesOutput.classList.remove('hidden');
+            window.scrollTo({ top: examplesOutput.offsetTop - 100, behavior: 'smooth' });
+
+            const structuredPromptInput = userPromptParts.map(p => `[${p.id}]: ${p.value || '(empty)'}`).join('\n');
+
+            const metaPrompt = `Act as a strict university professor. The student has provided the following prompt idea, broken down by element:
+            ${structuredPromptInput}
+            
+            Your task is to create a "Strong Prompt" example for the student.
+            
+            1.  **Analyze and Augment:** Take the student's complete idea (all provided fields) and creatively add the necessary details to build an exemplary, complete prompt that incorporates all six elements of the prompt framework (Subject, Style, Details, Composition, Lighting, Color).
+            2.  **Structure the Output:** Provide your response as a single JSON object with the following keys:
+                * "strong_prompt_elements": An array of 6 objects. Each object represents one element of the framework and must have these keys:
+                    * "element": The name of the element (e.g., "Subject").
+                    * "value": The detailed text for this element in the strong prompt you created.
+                    * "explanation": A brief, academic explanation of why this detailed element is an improvement over the original input.
+            
+            Ensure the generated JSON is valid and complete.`;
+
+            const payload = { 
+                contents: [{ role: "user", parts: [{ text: metaPrompt }] }], 
+                generationConfig: { 
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                           "strong_prompt_elements": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "element": { "type": "STRING" },
+                                        "value": { "type": "STRING" },
+                                        "explanation": { "type": "STRING" }
+                                    },
+                                    "required": ["element", "value", "explanation"]
+                                }
+                            }
+                        },
+                        "required": ["strong_prompt_elements"]
+                    }
+                }
+            };
+            try {
+                 // All API calls now go through our Netlify function.
+                const response = await fetch('/.netlify/functions/api', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        endpoint: 'generateContent', // Specify the Gemini endpoint
+                        payload: payload
+                    }),
+                });
+
+                if (!response.ok) {
+                     const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`The server returned an unreadable error: ${response.status} ${response.statusText}`);
+                    }
+                    throw new Error(errorData.error?.message || 'An unknown API error occurred.');
+                }
+                
+                const result = await response.json();
+                
+                const candidate = result.candidates && result.candidates[0];
+                 if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+                     throw new Error("The AI did not return a valid response structure for the example.");
+                }
+
+                const rawText = candidate.content.parts[0].text;
+                const data = extractJsonFromString(rawText);
+
+                if (!data) {
+                    console.error("Could not extract valid JSON from example response:", rawText);
+                    throw new Error("The AI returned an example in an invalid format.");
+                }
+
+                if (!data.strong_prompt_elements) {
+                    throw new Error("The AI returned an example with missing fields.");
+                }
+                renderExamples(data, userPromptParts);
+
+            } catch (error) {
+                console.error("Example Generation Error:", error);
+                examplesOutput.innerHTML = `<p class="text-red-500 text-center p-4">${error.message}</p>`;
+            } finally {
+                toggleButtonLoading(examplesBtn, false);
+            }
+        };
+
+        const handleGenerateImage = async () => {
+            const generateBtn = document.getElementById('generate-btn');
+            const finalPrompt = getCombinedPrompt();
+            if (!finalPrompt || generateBtn.classList.contains('locked')) return;
+            
+            const imageOutput = document.getElementById('image-output');
+            const imagePlaceholder = document.getElementById('image-placeholder');
+            
+            toggleButtonLoading(generateBtn, true);
+            imageOutput.classList.remove('hidden');
+            imagePlaceholder.innerHTML = createLoader('Generating your image...');
+            window.scrollTo({ top: imageOutput.offsetTop - 100, behavior: 'smooth' });
+            
+            const payload = { instances: [{ prompt: finalPrompt }], parameters: { sampleCount: 1 } };
+            try {
+                 // All API calls now go through our Netlify function.
+                const response = await fetch('/.netlify/functions/api', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        endpoint: 'predict', // Specify the Imagen endpoint
+                        payload: payload
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        throw new Error(`The server returned an unreadable error: ${response.status} ${response.statusText}`);
+                    }
+                    throw new Error(errorData.error?.message || 'An unknown API error occurred.');
+                }
+
+                const result = await response.json();
+                if (result.predictions?.[0]?.bytesBase64Encoded) {
+                    imagePlaceholder.innerHTML = `<img src="data:image/png;base64,${result.predictions[0].bytesBase64Encoded}" alt="AI generated image" class="w-full h-full object-contain rounded-lg">`;
+                } else { throw new Error('Image data not found in response.'); }
+            } catch(error) {
+                console.error("Image Generation Error:", error);
+                imagePlaceholder.innerHTML = `<p class="text-red-500 text-center p-4">Sorry, image generation failed. The prompt may have been rejected for safety reasons, or a network issue occurred.</p>`;
+            } finally {
+                toggleButtonLoading(generateBtn, false);
+            }
+        };
+
+        // --- RENDERING FUNCTIONS ---
+        const renderEvaluation = (data) => {
+            const feedbackOutput = document.getElementById('feedback-output');
+            const getScoreColor = (score, max) => {
+                if (max === 0) return 'text-gray-500'; // Avoid division by zero
+                const percentage = (score / max) * 100;
+                if (percentage >= 80) return 'text-green-500';
+                if (percentage >= 50) return 'text-yellow-500';
+                return 'text-red-500';
+            };
+            
+            const unlockMessage = data.overallScore >= 8 
+                ? `<p class="text-green-500 font-semibold mt-4 text-center text-lg">Congratulations! Your score of ${data.overallScore}/10 has unlocked the Image Generator.</p>`
+                : `<p class="text-yellow-500 font-semibold mt-4 text-center text-lg">Your score of ${data.overallScore}/10 is a good start, but you must achieve a score of 8 or higher. Review the feedback and refine your prompt.</p>`;
+
+            let feedbackHtml = `
+                <h2 class="text-2xl font-bold mb-4 text-center">Professor's Evaluation</h2>
+                <div class="text-center mb-6 p-4 rounded-lg bg-gray-100 dark:bg-gray-800">
+                    <p class="text-lg">Overall Score:</p>
+                    <p class="text-6xl font-extrabold ${getScoreColor(data.overallScore, 10)}">${data.overallScore}<span class="text-3xl text-gray-400">/10</span></p>
+                    <p class="mt-2 text-gray-600 dark:text-gray-400 max-w-xl mx-auto">${data.overallFeedback}</p>
+                    ${unlockMessage}
+                </div>
+                <h3 class="text-xl font-bold mb-4">Component-Level Analysis:</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            `;
+
+            if (data.elementFeedback && Array.isArray(data.elementFeedback)) {
+                data.elementFeedback.forEach(item => {
+                    feedbackHtml += `
+                        <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                            <div class="flex justify-between items-baseline">
+                               <h4 class="font-bold text-gray-900 dark:text-white mb-1">${item.element || 'N/A'}</h4>
+                               <span class="font-bold text-lg ${getScoreColor(item.score, 5)}">${item.score !== undefined ? item.score : '?'}<span class="text-sm text-gray-400">/5</span></span>
+                            </div>
+                            <p class="text-gray-700 dark:text-gray-300 mt-1">${item.feedback || 'No feedback provided.'}</p>
+                        </div>
+                    `;
+                });
+            }
+            feedbackHtml += '</div>';
+            feedbackOutput.innerHTML = feedbackHtml;
+        };
+
+        const renderExamples = (data, userPromptParts) => {
+             const examplesOutput = document.getElementById('examples-output');
+             
+             let strongPromptHtml = data.strong_prompt_elements.map(item => `
+                <div class="prompt-element-item">
+                     <strong class="text-gray-900 dark:text-white">${item.element}:</strong>
+                     <p class="text-gray-700 dark:text-gray-300">${item.value}</p>
+                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1"><em>${item.explanation}</em></p>
+                </div>
+             `).join('');
+
+             let userInputHtml = userPromptParts
+                .filter(part => part.value)
+                .map(part => `<div class="prompt-element-item"><strong>${part.id.charAt(0).toUpperCase() + part.id.slice(1)}:</strong><p>${part.value}</p></div>`)
+                .join('');
+
+             examplesOutput.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="text-xl font-bold text-red-500 mb-2 text-center">Prompt Input Provided</h3>
+                        <div class="prompt-example-card text-gray-700 dark:text-gray-300">
+                            ${userInputHtml || '<p>No input provided.</p>'}
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-green-500 mb-2 text-center">Strong Prompt Example</h3>
+                        <div class="prompt-example-card">
+                            ${strongPromptHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+        
+        // --- INITIALIZATION ---
+        function initializeApp() {
+            const buttons = {
+                evaluate: document.getElementById('evaluate-btn'),
+                examples: document.getElementById('examples-btn'),
+                generate: document.getElementById('generate-btn'),
+                reset: document.getElementById('reset-btn'),
+            };
+            
+            buttons.evaluate.addEventListener('click', handleEvaluate);
+            buttons.examples.addEventListener('click', handleShowExamples);
+            buttons.generate.addEventListener('click', handleGenerateImage);
+            
+            buttons.reset.addEventListener('click', () => {
+                PROMPT_IDS.forEach(id => { document.getElementById(id).value = ''; });
+                document.getElementById('feedback-output').classList.add('hidden');
+                document.getElementById('examples-output').classList.add('hidden');
+                document.getElementById('image-output').classList.add('hidden');
+                
+                buttons.generate.disabled = true;
+                buttons.generate.classList.add('locked');
+                buttons.generate.classList.remove('bg-green-600', 'hover:bg-green-700');
+                buttons.generate.querySelector('.lock-icon').innerHTML = `<i data-lucide="lock"></i>`;
+                
+                updateButtonStates();
+                if(typeof lucide !== 'undefined') lucide.createIcons();
+            });
+            
+            PROMPT_IDS.forEach(id => {
+                document.getElementById(id).addEventListener('input', updateButtonStates);
+            });
+            
+            updateButtonStates();
+            buttons.generate.disabled = true;
+        }
+
+        // --- SCRIPT EXECUTION ---
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        const checkLucide = setInterval(() => {
+            if (typeof lucide !== 'undefined') {
+                clearInterval(checkLucide);
+                 lucide.createIcons();
+                 document.querySelectorAll('details').forEach(detail => {
+                    detail.addEventListener('toggle', () => detail.querySelector('summary i').classList.toggle('rotate-180'));
+                });
+            }
+        }, 100);
+        
+    </script>
+</body>
+</html>

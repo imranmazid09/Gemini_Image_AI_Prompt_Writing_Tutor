@@ -1,0 +1,15 @@
+# This is a more explicit configuration to ensure Netlify's build system
+# correctly discovers and deploys the serverless function.
+
+[build]
+  # We specify a dummy build command and the root directory for publishing.
+  command = "echo 'Build command not required'"
+  publish = "."
+  # This tells the build system where to find the functions.
+  functions = "functions"
+
+[functions]
+  # This redundantly tells the functions runtime where the functions are.
+  directory = "functions"
+  # This specifies the modern 'esbuild' bundler for better performance.
+  node_bundler = "esbuild"
