@@ -241,7 +241,28 @@
             }
             return response.json();
         }
-        
+
+        /**
+         * Extracts a JSON object from a string that might contain other text, like markdown.
+         * @param {string} str The string to parse.
+         * @returns {object|null} The parsed JSON object or null if not found.
+         */
+        function extractJsonFromString(str) {
+            if (!str || typeof str !== 'string') {
+                return null;
+            }
+            const match = str.match(/\{[\s\S]*\}/);
+            if (match) {
+                try {
+                    return JSON.parse(match[0]);
+                } catch (e) {
+                    console.error("Failed to parse extracted JSON:", e, "Raw text was:", str);
+                    return null;
+                }
+            }
+            return null;
+        }
+
         // --- CORE LOGIC & API CALLS ---
         const handleEvaluate = async () => {
             const userPromptParts = getCombinedPrompt(true);
@@ -256,54 +277,62 @@
             feedbackOutput.classList.remove('hidden');
             window.scrollTo({ top: feedbackOutput.offsetTop - 100, behavior: 'smooth' });
 
+            const structuredPromptInput = userPromptParts.map(p => `[${p.id}]: ${p.value || '(empty)'}`).join('\n');
+
+            const metaPrompt = `Act as an exceptionally strict, rigorous university professor.
+            
+            **Primary Directive:** You will evaluate a student's prompt which is provided as six distinct fields. Your primary task is to grade **each field in complete isolation**. You are forbidden from analyzing the text in one field and applying that analysis to another.
+
+            **Student's Submission (separated by field):**
+            ${structuredPromptInput}
+
+            **Mandatory Grading Rules:**
+            1.  **Isolate Each Field:** Evaluate \`[subject]\` based ONLY on the text next to \`[subject]\`. Evaluate \`[style]\` based ONLY on the text next to \`[style]\`, and so on for all six fields.
+            2.  **Score Empty Fields as Zero:** If a field is explicitly marked as \`(empty)\`, its score MUST be 0. The feedback must state that its omission is a critical failure. There are no exceptions.
+            3.  **Grade Filled Fields Harshly:** If a field has text, grade it from 0-5. A simple phrase is not enough for a high score. It requires descriptive detail *within that specific field*.
+            4.  **Calculate Overall Score:** The overall score is an average of the six individual element scores, scaled to 10 and rounded to one decimal place. However, if four or more fields are empty, the overall score MUST be overridden to \`1\`.
+            5.  **Overall Feedback:** The overall feedback must reflect the grading. If the score is low due to omissions, the feedback must state that directly.
+
+            **Output Format:**
+            Respond with a single, valid JSON object. Add no text or markdown outside this object.`;
+            
+            const payload = {
+                contents: [{ role: "user", parts: [{ text: metaPrompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+
             try {
-                const evaluationPromises = userPromptParts.map(part => {
-                    const metaPrompt = `Act as a strict professor. Evaluate the following single prompt element: "${part.value || '(empty)'}". Provide a score from 0-5 and brief feedback. If empty, score is 0 and feedback must state its omission is a failure. Respond in JSON with keys "score" and "feedback".`;
-                    const payload = {
-                        contents: [{ role: "user", parts: [{ text: metaPrompt }] }],
-                        generationConfig: { responseMimeType: "application/json" }
-                    };
-                    return callApi('generateContent', payload);
-                });
-
-                const overallFeedbackPrompt = `Act as a strict professor. Based on this prompt: "${getCombinedPrompt()}", provide a concise, critical summary of its overall quality.`;
-                const overallFeedbackPayload = {
-                    contents: [{ role: "user", parts: [{ text: overallFeedbackPrompt }] }]
-                };
-                const overallFeedbackPromise = callApi('generateContent', overallFeedbackPayload);
-
-                const results = await Promise.all([...evaluationPromises, overallFeedbackPromise]);
-
-                const elementResults = results.slice(0, 6);
-                const overallResult = results[6];
-
-                const evaluationData = {
-                    elementFeedback: [],
-                    overallFeedback: overallResult.candidates[0].content.parts[0].text,
-                    overallScore: 0
-                };
-
-                let totalScore = 0;
-                elementResults.forEach((res, index) => {
-                    const partData = JSON.parse(res.candidates[0].content.parts[0].text);
-                    totalScore += partData.score;
-                    evaluationData.elementFeedback.push({
-                        element: PROMPT_IDS[index].charAt(0).toUpperCase() + PROMPT_IDS[index].slice(1),
-                        score: partData.score,
-                        feedback: partData.feedback
-                    });
-                });
+                const result = await callApi('generateContent', payload);
                 
-                evaluationData.overallScore = parseFloat((totalScore / 30 * 10).toFixed(1));
+                const candidate = result.candidates && result.candidates[0];
+                if (!candidate || !candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {
+                     throw new Error("The AI did not return a valid response structure. This can happen with very short prompts or due to a safety filter. Please try a more descriptive prompt.");
+                }
+                
+                const rawText = candidate.content.parts[0].text;
+                if (!rawText || rawText.trim() === '') {
+                    throw new Error("The AI returned an empty response. Please try rephrasing your prompt or adding more detail.");
+                }
 
+                let data = extractJsonFromString(rawText);
+
+                if (!data) {
+                    console.error("Could not extract valid JSON from response:", rawText);
+                    throw new Error("The AI returned a response in an unexpected format. Please try again.");
+                }
+
+                if (typeof data.overallScore !== 'number' || typeof data.overallFeedback !== 'string' || !Array.isArray(data.elementFeedback)) {
+                    console.error("Invalid data structure from AI:", data);
+                    throw new Error("The AI's response was missing required fields. Please try rephrasing your prompt.");
+                }
+                
                 if (filledPartsCount <= 2) {
-                    evaluationData.overallScore = 1;
-                    evaluationData.overallFeedback = "This prompt is critically insufficient as it provides minimal detail. A strong prompt requires a thoughtful combination of multiple descriptive elements."
+                    data.overallScore = 1;
                 }
                     
-                renderEvaluation(evaluationData);
+                renderEvaluation(data);
                 const generateBtn = document.getElementById('generate-btn');
-                if (evaluationData.overallScore >= 8) {
+                if (data.overallScore >= 8) {
                     generateBtn.disabled = false;
                     generateBtn.classList.remove('locked', 'bg-gray-500');
                     generateBtn.classList.add('bg-green-600', 'hover:bg-green-700');
@@ -315,6 +344,7 @@
                     generateBtn.querySelector('.lock-icon').innerHTML = `<i data-lucide="lock"></i>`;
                 }
                 if(typeof lucide !== 'undefined') lucide.createIcons();
+
 
             } catch (error) {
                 console.error("Evaluation Error:", error);
@@ -356,25 +386,7 @@
             const payload = { 
                 contents: [{ role: "user", parts: [{ text: metaPrompt }] }], 
                 generationConfig: { 
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                           "strong_prompt_elements": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "element": { "type": "STRING" },
-                                        "value": { "type": "STRING" },
-                                        "explanation": { "type": "STRING" }
-                                    },
-                                    "required": ["element", "value", "explanation"]
-                                }
-                            }
-                        },
-                        "required": ["strong_prompt_elements"]
-                    }
+                    responseMimeType: "application/json"
                 }
             };
             try {
@@ -384,8 +396,14 @@
                      throw new Error("The AI did not return a valid response structure for the example.");
                 }
 
-                const data = JSON.parse(candidate.content.parts[0].text);
-                
+                const rawText = candidate.content.parts[0].text;
+                const data = extractJsonFromString(rawText);
+
+                if (!data) {
+                    console.error("Could not extract valid JSON from example response:", rawText);
+                    throw new Error("The AI returned an example in an invalid format.");
+                }
+
                 if (!data.strong_prompt_elements) {
                     throw new Error("The AI returned an example with missing fields.");
                 }
