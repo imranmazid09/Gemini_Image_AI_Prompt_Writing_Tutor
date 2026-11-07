@@ -23,9 +23,13 @@ exports.handler = async (event) => {
     // Determine the correct Google AI API URL based on the endpoint sent from the front-end.
     let apiUrl;
     if (endpoint === 'generateContent') {
-      apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
+      payload.generationConfig = {
+        ...payload.generationConfig,
+        thinkingConfig: { thinkingLevel: 'low' },
+      };
     } else if (endpoint === 'predict') {
-       apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+       apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict';
     } else {
        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid API endpoint specified.' }) };
     }
@@ -35,6 +39,7 @@ exports.handler = async (event) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
       body: JSON.stringify(payload),
     });
