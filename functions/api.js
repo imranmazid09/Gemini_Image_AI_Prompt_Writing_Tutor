@@ -22,6 +22,7 @@ exports.handler = async (event) => {
     
     // Determine the correct Google AI API URL based on the endpoint sent from the front-end.
     let apiUrl;
+    let requestPayload = payload;
     if (endpoint === 'generateContent') {
       apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
       payload.generationConfig = {
@@ -29,7 +30,16 @@ exports.handler = async (event) => {
         thinkingConfig: { thinkingLevel: 'low' },
       };
     } else if (endpoint === 'predict') {
-       apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict';
+      const prompt = payload?.instances?.[0]?.prompt;
+      if (typeof prompt !== 'string' || !prompt.trim()) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'An image prompt is required.' }) };
+      }
+
+      apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent';
+      requestPayload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ['IMAGE'] },
+      };
     } else {
        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid API endpoint specified.' }) };
     }
@@ -41,7 +51,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(requestPayload),
     });
 
     const data = await response.json();
@@ -49,6 +59,19 @@ exports.handler = async (event) => {
     if (!response.ok) {
        console.error('Google AI API Error:', data);
        return { statusCode: response.status, body: JSON.stringify(data) };
+    }
+
+    // Preserve the response shape expected by the image preview.
+    if (endpoint === 'predict') {
+      const image = data.candidates?.[0]?.content?.parts?.find(part => part.inlineData?.data)?.inlineData;
+      if (!image) {
+        return { statusCode: 422, body: JSON.stringify({ error: 'The image model returned no preview.' }) };
+      }
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ predictions: [{ bytesBase64Encoded: image.data }] }),
+      };
     }
 
     // Send the response from the Google AI API back to the front-end.
